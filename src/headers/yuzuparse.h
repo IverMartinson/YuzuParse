@@ -10,5 +10,6 @@
 #include <stdlib.h>
 #include <portaudio.h>
 #include <fcntl.h>
+#include <math.h>
 
 #endif

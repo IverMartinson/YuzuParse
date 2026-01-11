@@ -5,8 +5,11 @@ int main(){
 
     pa_callback_data* callback_data;
 
+    double speed = -1;
+    unsigned char should_loop_audio = 1;
+
     if (audio_stream)
-        callback_data = YZ_play_stream(audio_stream);
+        callback_data = YZ_play_stream_dynamic(audio_stream, &speed, &should_loop_audio);
     
     // wait until audio is finished playing until exiting
     while (callback_data->current_sample < callback_data->sample_count){}

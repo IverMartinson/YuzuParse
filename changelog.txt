@@ -1,1 +1,2 @@
--blocked PortAudio's terminal output on init
+-made callback exit safer
+-added dynamically playback, can now change speed (can be positive and negative) and can loop audio

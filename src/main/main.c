@@ -252,18 +252,33 @@ int portaudio_callback(const void* input, void* output, unsigned long frame_coun
 
     for(uint32_t i = 0; i < frame_count; i++){
         for (uint32_t j = 0; j < data->channel_count; j++) {
-            *out++ = data->pcm_data[(data->current_sample) * data->channel_count + j];
+            *out++ = data->pcm_data[(int)(data->current_sample) * data->channel_count + j];
         }
 
-        data->current_sample++;
-    }
+        data->current_sample += *data->speed_multiplier;
     
-    if (data->current_sample < data->sample_count) return 0;
-    else{
+        if (*data->should_loop_audio){
+            if (data->current_sample >= data->sample_count){
+                data->current_sample = data->sample_count - data->current_sample;
+            } else if (data->current_sample < 0){
+                data->current_sample = data->sample_count + data->current_sample;
+            }
+        }
+
+        if (data->current_sample >= data->sample_count || data->current_sample < 0){
+            free(audio_data);
+
+            return 1;
+        }
+    }
+
+    if (data->current_sample >= data->sample_count){
         free(audio_data);
 
         return 1;
     }
+    
+    return 0;
 }
 
 unsigned char player_is_initialized = 0;
@@ -305,7 +320,7 @@ void YZ_kill_player(){
     if(error != paNoError) { printf("PortAudio error: %d\n", error); exit(1);}
 }
 
-pa_callback_data* YZ_play_stream(YZ_audio_stream* audio_stream){
+pa_callback_data* play_stream(YZ_audio_stream* audio_stream, double* pitch_multiplier, double* speed_multiplier, unsigned char* should_loop_audio){
     PaError error;
     
     PaStream *stream;
@@ -316,6 +331,9 @@ pa_callback_data* YZ_play_stream(YZ_audio_stream* audio_stream){
     callback_data->current_sample = 0;
     callback_data->pcm_data = audio_stream->pcm_data;
     callback_data->sample_count = audio_stream->sample_count;
+    callback_data->pitch_multiplier = pitch_multiplier;
+    callback_data->speed_multiplier = speed_multiplier;
+    callback_data->should_loop_audio = should_loop_audio;
 
     if (!player_is_initialized) YZ_init_player();
 
@@ -325,4 +343,17 @@ pa_callback_data* YZ_play_stream(YZ_audio_stream* audio_stream){
     Pa_StartStream(stream);
 
     return callback_data;
+}
+
+// play an audio stream
+pa_callback_data* YZ_play_stream(YZ_audio_stream* audio_stream){
+    double value = 1;
+    unsigned char antivalue = 0;
+
+    return play_stream(audio_stream, &value, &value, &antivalue);
+}
+
+// play an audio stream and modify pitch and speed dynamically. Pitch and speed changes work in real time due to it being pointers to the values
+pa_callback_data* YZ_play_stream_dynamic(YZ_audio_stream* audio_stream, double* speed_multiplier, unsigned char* should_loop_audio){
+    return play_stream(audio_stream, NULL, speed_multiplier, should_loop_audio);
 }

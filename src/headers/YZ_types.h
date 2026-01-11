@@ -11,10 +11,13 @@ typedef struct {
 } YZ_audio_stream;
 
 typedef struct {
-    uint32_t current_sample;
+    float current_sample;
     float* pcm_data;
     uint32_t channel_count;
     uint32_t sample_count;
+    double* pitch_multiplier;
+    double* speed_multiplier;
+    unsigned char* should_loop_audio;
 } pa_callback_data;
 
 #endif
