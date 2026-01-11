@@ -277,7 +277,16 @@ void YZ_init_player(){
     
     PaError error;
 
+    // block PortAudio's standard output and standard error stream
+    freopen("/dev/null", "w", stdout); 
+    freopen("/dev/null", "w", stderr); 
+
     error = Pa_Initialize();
+    
+    // unblock PortAudio's standard output and standard error stream
+    freopen("/dev/tty", "w", stdout);
+    freopen("/dev/tty", "w", stderr);
+
     if(error != paNoError) { printf("PortAudio error: %d\n", error); exit(1);}
     
     player_is_initialized = 1;

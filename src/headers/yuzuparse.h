@@ -9,5 +9,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <portaudio.h>
+#include <fcntl.h>
 
 #endif

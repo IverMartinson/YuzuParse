@@ -7,7 +7,7 @@ int main(){
 
     if (audio_stream)
         callback_data = YZ_play_stream(audio_stream);
-
+    
     // wait until audio is finished playing until exiting
     while (callback_data->current_sample < callback_data->sample_count){}
 
