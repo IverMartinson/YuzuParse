@@ -1,2 +1,1 @@
--made callback exit safer
--added dynamically playback, can now change speed (can be positive and negative) and can loop audio
+-added function pointer that you can pass that runs at the end of a sound being played

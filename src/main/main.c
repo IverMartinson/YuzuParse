@@ -67,16 +67,20 @@ int8_t get_1(){
 
 int16_t get_2(){
     int16_t result = file_buffer[current_byte] | (file_buffer[current_byte + 1] << 8);
+    
     current_byte += 2;
+    
     return result;
 }
 
 int32_t get_4(){
     int32_t result = file_buffer[current_byte] | 
-                     (file_buffer[current_byte + 1] << 8) | 
-                     (file_buffer[current_byte + 2] << 16) | 
-                     (file_buffer[current_byte + 3] << 24);
+        (file_buffer[current_byte + 1] << 8) | 
+        (file_buffer[current_byte + 2] << 16) | 
+        (file_buffer[current_byte + 3] << 24);
+    
     current_byte += 4;
+
     return result;
 }
 
@@ -180,7 +184,6 @@ YZ_audio_stream* YZ_load_wav(){
     return audio_stream;
 }
 
-
 YZ_audio_stream* YZ_load_mp3(){return NULL;}
 YZ_audio_stream* YZ_load_ogg(){return NULL;}
 YZ_audio_stream* YZ_load_flac(){return NULL;}
@@ -223,7 +226,7 @@ YZ_audio_stream* YZ_load_audio_file(char* filename, unsigned char debug_mode){
     }
     
     current_byte = 0;
-
+    
     if (!strcmp(filetype_string, "wav") || !strcmp(filetype_string, "WAV") || !strcmp(filetype_string, "wave") || !strcmp(filetype_string, "WAVE")){ 
         return YZ_load_wav();
     } else 
@@ -266,19 +269,22 @@ int portaudio_callback(const void* input, void* output, unsigned long frame_coun
         }
 
         if (data->current_sample >= data->sample_count || data->current_sample < 0){
-            free(audio_data);
-
-            return 1;
+            goto END;
         }
     }
 
     if (data->current_sample >= data->sample_count){
+        goto END;
+    }
+
+    return 0;
+
+    END:
+        if (data->end_function) data->end_function(data->custom_pointer_for_end_function);
+
         free(audio_data);
 
-        return 1;
-    }
-    
-    return 0;
+        return 1;    
 }
 
 unsigned char player_is_initialized = 0;
@@ -320,7 +326,7 @@ void YZ_kill_player(){
     if(error != paNoError) { printf("PortAudio error: %d\n", error); exit(1);}
 }
 
-pa_callback_data* play_stream(YZ_audio_stream* audio_stream, double* pitch_multiplier, double* speed_multiplier, unsigned char* should_loop_audio){
+pa_callback_data* play_stream(YZ_audio_stream* audio_stream, double* pitch_multiplier, double* speed_multiplier, unsigned char* should_loop_audio, double starting_second, void (*end_func)(void* custom_pointer_for_end_function), void* custom_pointer_for_end_function){
     PaError error;
     
     PaStream *stream;
@@ -328,12 +334,14 @@ pa_callback_data* play_stream(YZ_audio_stream* audio_stream, double* pitch_multi
     pa_callback_data* callback_data = malloc(sizeof(pa_callback_data));
 
     callback_data->channel_count = audio_stream->channel_count;
-    callback_data->current_sample = 0;
+    callback_data->current_sample = starting_second >= 0 ? audio_stream->sample_rate * starting_second : audio_stream->sample_count;
     callback_data->pcm_data = audio_stream->pcm_data;
     callback_data->sample_count = audio_stream->sample_count;
     callback_data->pitch_multiplier = pitch_multiplier;
     callback_data->speed_multiplier = speed_multiplier;
     callback_data->should_loop_audio = should_loop_audio;
+    callback_data->end_function = end_func;
+    callback_data->custom_pointer_for_end_function = custom_pointer_for_end_function;
 
     if (!player_is_initialized) YZ_init_player();
 
@@ -350,10 +358,10 @@ pa_callback_data* YZ_play_stream(YZ_audio_stream* audio_stream){
     double value = 1;
     unsigned char antivalue = 0;
 
-    return play_stream(audio_stream, &value, &value, &antivalue);
+    return play_stream(audio_stream, &value, &value, &antivalue, (double)antivalue, NULL, NULL);
 }
 
 // play an audio stream and modify pitch and speed dynamically. Pitch and speed changes work in real time due to it being pointers to the values
-pa_callback_data* YZ_play_stream_dynamic(YZ_audio_stream* audio_stream, double* speed_multiplier, unsigned char* should_loop_audio){
-    return play_stream(audio_stream, NULL, speed_multiplier, should_loop_audio);
+pa_callback_data* YZ_play_stream_dynamic(YZ_audio_stream* audio_stream, double* speed_multiplier, unsigned char* should_loop_audio, double starting_second, void (*end_func)(void*), void* custom_pointer_for_end_function){
+    return play_stream(audio_stream, NULL, speed_multiplier, should_loop_audio, starting_second, end_func, custom_pointer_for_end_function);
 }

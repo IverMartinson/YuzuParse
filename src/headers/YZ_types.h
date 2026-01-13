@@ -18,6 +18,8 @@ typedef struct {
     double* pitch_multiplier;
     double* speed_multiplier;
     unsigned char* should_loop_audio;
+    void(*end_function)(void*);
+    void* custom_pointer_for_end_function;
 } pa_callback_data;
 
 #endif
