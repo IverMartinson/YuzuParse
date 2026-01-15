@@ -1,1 +1,1 @@
--added function pointer that you can pass that runs at the end of a sound being played
+-removed licence
