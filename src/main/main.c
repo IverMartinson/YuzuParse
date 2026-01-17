@@ -287,6 +287,35 @@ int portaudio_callback(const void* input, void* output, unsigned long frame_coun
         return 1;    
 }
 
+int tone_callback(const void* input, void* output, unsigned long frames_per_buffer, const PaStreamCallbackTimeInfo* time_info, PaStreamFlags status_flags, void* user_data){
+    pa_tone_callback_data* data = (pa_tone_callback_data*)user_data;
+    float *out = (float*)output;
+    unsigned long i;
+
+    for(i = 0; i < frames_per_buffer; i++){
+        *out++ = data->left_tone;
+        *out++ = data->right_tone;
+        
+        float delta = data->tone_generator((double)data->current_sample / (double)data->sample_rate, data->value);
+
+        data->left_tone = delta;
+        if(data->left_tone >= 1.0) data->left_tone = 1.0;
+        if(data->left_tone <= -1.0) data->left_tone = -1.0;
+        
+        data->right_tone = delta;
+        if(data->right_tone >= 1.0) data->right_tone = 1.0;
+        if(data->right_tone <= -1.0) data->right_tone = -1.0;
+    
+        data->current_sample++;
+    }
+
+    if (data->current_sample >= data->sample_count){
+        return 1;
+    }
+
+    return 0;
+}
+
 unsigned char player_is_initialized = 0;
 
 void YZ_init_player(){
@@ -364,4 +393,28 @@ pa_callback_data* YZ_play_stream(YZ_audio_stream* audio_stream){
 // play an audio stream and modify pitch and speed dynamically. Pitch and speed changes work in real time due to it being pointers to the values
 pa_callback_data* YZ_play_stream_dynamic(YZ_audio_stream* audio_stream, double* speed_multiplier, unsigned char* should_loop_audio, double starting_second, void (*end_func)(void*), void* custom_pointer_for_end_function){
     return play_stream(audio_stream, NULL, speed_multiplier, should_loop_audio, starting_second, end_func, custom_pointer_for_end_function);
+}
+
+pa_tone_callback_data* YZ_play_tone(float (*tone_generator)(float, float), float sample_rate, float duration, float value){
+    if (!player_is_initialized) YZ_init_player();
+
+    pa_tone_callback_data* callback_data = malloc(sizeof(pa_tone_callback_data));
+
+    callback_data->tone_generator = tone_generator;
+    callback_data->current_sample = 0;
+    callback_data->duration = duration;
+    callback_data->left_amplitude = 1;
+    callback_data->right_amplitude = 1;
+    callback_data->sample_rate = sample_rate;
+    callback_data->sample_count = duration * sample_rate;
+    callback_data->value = value;
+
+    PaStream* stream;
+
+    PaError error = Pa_OpenDefaultStream(&stream, 0, 2, paFloat32, sample_rate, paFramesPerBufferUnspecified, tone_callback, callback_data);
+    if(error != paNoError) { printf("PortAudio error: %d\n", error); exit(1);}
+
+    Pa_StartStream(stream);
+
+    return callback_data;
 }

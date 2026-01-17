@@ -18,4 +18,8 @@ void YZ_init_player();
 // Kills the player and frees memory
 void YZ_kill_player();
 
+// plays a tone defined by a function of time
+// the tone generator function must be a function of time that returns a delta that will be applied to the speaker position
+pa_tone_callback_data* YZ_play_tone(float (*tone_generator)(float, float), float sample_rate, float duration, float value);
+
 #endif

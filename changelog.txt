@@ -1,1 +1,2 @@
--removed licence
+-added tone player
+-new example
