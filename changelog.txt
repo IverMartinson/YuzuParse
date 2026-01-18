@@ -1,2 +1,1 @@
--added tone player
--new example
+-moved tone player to Mandarin (https://git.mynameisthe.com/IverMartinson/Mandarin)
